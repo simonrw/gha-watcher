@@ -1,0 +1,28 @@
+{
+  "name": "gha-watcher",
+  "module": "index.tsx",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "start": "bun index.tsx",
+    "demo": "bun index.tsx --demo",
+    "typecheck": "tsc --noEmit",
+    "test": "bun test",
+    "bench": "bun scripts/benchmark.tsx",
+    "build": "bun build ./index.tsx --compile --outfile gha-watcher"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "@types/react": "^19.3.0",
+    "react-devtools": "^8.0.0",
+    "react-devtools-core": "^8.0.0"
+  },
+  "peerDependencies": {
+    "typescript": "^7"
+  },
+  "dependencies": {
+    "ink": "^8.0.0",
+    "octokit": "^5.0.5",
+    "react": "^19.3.1"
+  }
+}
