@@ -2,7 +2,24 @@
 
 An Ink terminal UI for a GitHub Actions run, using Octokit. Browse jobs and steps, search large job matrices, and follow status changes.
 
-Install and try the offline demo:
+Install with mise:
+
+```toml
+[tools]
+bun = "latest"
+"npm:github:simonrw/gha-watcher" = "latest"
+```
+
+```sh
+mise install
+gha-watcher --demo
+gha-watcher login
+gha-watcher RUN_ID --repo OWNER/REPO
+```
+
+The npm package installs the `gha-watcher` command, which runs with Bun. If you installed a version without the command, reinstall after updating with `mise install --force npm:github:simonrw/gha-watcher@latest`.
+
+To run from a checkout:
 
 ```sh
 bun install

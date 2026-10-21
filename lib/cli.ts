@@ -14,11 +14,11 @@ export type Options = {
 export const help = `gha-watcher - GitHub Actions in your terminal
 
 Usage:
-  bun start login
-  bun start logout
-  bun start <run-url>
-  bun start <run-id> --repo <owner/repo>
-  bun start --demo
+  gha-watcher login
+  gha-watcher logout
+  gha-watcher <run-url>
+  gha-watcher <run-id> --repo <owner/repo>
+  gha-watcher --demo
 
 Options:
   --repo, -R       Repository for a numeric run ID

@@ -1,3 +1,4 @@
+#!/usr/bin/env bun
 import { render, renderToString } from 'ink';
 import App from './components/App';
 import Dashboard from './components/Dashboard';

@@ -1,6 +1,15 @@
 {
   "name": "gha-watcher",
+  "version": "0.1.0",
   "module": "index.tsx",
+  "bin": {
+    "gha-watcher": "index.tsx"
+  },
+  "files": [
+    "index.tsx",
+    "lib",
+    "components"
+  ],
   "type": "module",
   "private": true,
   "scripts": {
