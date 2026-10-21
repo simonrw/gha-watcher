@@ -7,7 +7,7 @@ Install with mise:
 ```toml
 [tools]
 bun = "latest"
-"npm:github:simonrw/gha-watcher" = "latest"
+"npm:github:simonrw/gha-watcher" = "branch:main"
 ```
 
 ```sh
@@ -18,7 +18,7 @@ gha-watcher RUN_ID
 gha-watcher RUN_ID --repo OWNER/REPO
 ```
 
-The npm package installs the `gha-watcher` command, which runs with Bun. If you installed a version without the command, reinstall after updating with `mise install --force npm:github:simonrw/gha-watcher@latest`.
+The npm package installs the `gha-watcher` command, which runs with Bun. Use `branch:main` for Git installs: mise 2026.10.14's shell hook can report `latest` as missing even when `mise exec` works. To refresh the installed copy from main, run `mise install --force npm:github:simonrw/gha-watcher@branch:main`.
 
 To run from a checkout:
 
