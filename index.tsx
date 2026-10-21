@@ -4,7 +4,8 @@ import App from './components/App';
 import Dashboard from './components/Dashboard';
 import { help, parseOptions } from './lib/cli';
 import { createDemoLoader } from './lib/demo';
-import { createGitHubLoader, describeError } from './lib/github';
+import { createGitHubSource, describeError } from './lib/github';
+import { openBrowser } from './lib/browser';
 import { AuthError, getToken, logout, promptToken, saveToken } from './lib/auth';
 
 async function main() {
@@ -43,9 +44,8 @@ async function main() {
       }
     }
   }
-  const load = options.demo
-    ? createDemoLoader(options.demoJobs)
-    : await createGitHubLoader(options.target!, token);
+  const github = options.demo ? undefined : await createGitHubSource(options.target!, token);
+  const load = github?.load ?? createDemoLoader(options.demoJobs);
 
   if (options.once || !process.stdin.isTTY || !process.stdout.isTTY) {
     const snapshot = await load(AbortSignal.timeout(60_000));
@@ -54,7 +54,12 @@ async function main() {
       rows={snapshot.jobs.length + 24} now={Date.now()} demo={options.demo} />, { columns }) + '\n');
     return;
   }
-  const app = render(<App load={load} interval={options.interval} demo={options.demo} />, {
+  const openLogs = github ? async (jobId: number, signal: AbortSignal) => {
+    const url = await github.logUrl(jobId, signal);
+    signal.throwIfAborted();
+    await openBrowser(url, signal);
+  } : undefined;
+  const app = render(<App load={load} openLogs={openLogs} interval={options.interval} demo={options.demo} />, {
     alternateScreen: true,
     incrementalRendering: true,
   });

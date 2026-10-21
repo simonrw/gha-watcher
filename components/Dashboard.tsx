@@ -19,6 +19,7 @@ type Props = {
   paused?: boolean;
   busy?: boolean;
   error?: string;
+  logMessage?: string;
   updatedAt?: number;
   query?: string;
   searching?: boolean;
@@ -32,7 +33,7 @@ function Status({ status, conclusion }: { status: string | null; conclusion: str
   return <Text color={style.color}>{style.icon} {style.label}</Text>;
 }
 
-export default function Dashboard({ snapshot, jobs = snapshot.jobs, selected = 0, stepOffset = 0, columns, rows, now, demo, paused, busy, error, updatedAt, query = '', searching, filter = 'all', interval = 5000, details = false }: Props) {
+export default function Dashboard({ snapshot, jobs = snapshot.jobs, selected = 0, stepOffset = 0, columns, rows, now, demo, paused, busy, error, logMessage, updatedAt, query = '', searching, filter = 'all', interval = 5000, details = false }: Props) {
   const { run } = snapshot;
   const wide = columns >= 100;
   const count = visibleJobCount(rows);
@@ -88,7 +89,7 @@ export default function Dashboard({ snapshot, jobs = snapshot.jobs, selected = 0
     </Box>
     <Text dimColor wrap="truncate">{searching ? 'Search > ' : '/ search: '}{plain(query) || (searching ? '▏' : 'all jobs')} · f filter: {filter}</Text>
     <Box flexDirection={wide ? 'row' : 'column'} gap={wide ? 1 : 0}>
-      {(wide || !details) && <Box width={wide ? '52%' : '100%'} flexDirection="column" borderStyle="round" borderColor="cyan" paddingX={1}>
+      {(wide || !details) && <Box width={wide ? '52%' : '100%'} flexDirection="column" borderStyle="round" borderColor={details ? 'gray' : 'cyan'} paddingX={1}>
         <Text bold>JOBS <Text dimColor>{jobs.length ? `${offset + 1}-${offset + visible.length} of ${jobs.length}` : '0'}</Text></Text>
         {visible.map((item, row) => {
           const style = statusStyle(item.status, item.conclusion);
@@ -102,7 +103,7 @@ export default function Dashboard({ snapshot, jobs = snapshot.jobs, selected = 0
         })}
         {!jobs.length && <Text dimColor>{snapshot.jobs.length ? 'No jobs match.' : 'Waiting for jobs to be scheduled...'}</Text>}
       </Box>}
-      {(wide || details) && <Box width={wide ? undefined : '100%'} flexGrow={1} flexBasis={wide ? 0 : undefined} flexDirection="column" borderStyle="round" borderColor="gray" paddingX={1}>
+      {(wide || details) && <Box width={wide ? undefined : '100%'} flexGrow={1} flexBasis={wide ? 0 : undefined} flexDirection="column" borderStyle="round" borderColor={details ? 'cyan' : 'gray'} paddingX={1}>
         <Text bold wrap="truncate">{job ? plain(job.name) : 'JOB DETAILS'}</Text>
         {job && <>
           <Status status={job.status} conclusion={job.conclusion} />
@@ -113,11 +114,11 @@ export default function Dashboard({ snapshot, jobs = snapshot.jobs, selected = 0
             <Box width={10} justifyContent="flex-end"><Text dimColor>{duration(step.started_at, step.completed_at, now)}</Text></Box>
           </Box>)}
           {!steps.length && <Text dimColor>No steps reported yet.</Text>}
-          <Text dimColor>{steps.length ? `${firstStep + 1}-${Math.min(firstStep + stepCount, steps.length)} of ${steps.length} steps · ←/→ scroll` : 'Waiting for step details'}</Text>
+          <Text dimColor wrap="truncate">{steps.length ? `${firstStep + 1}-${Math.min(firstStep + stepCount, steps.length)} of ${steps.length} steps · ←/→ scroll` : 'Waiting for step details'}</Text>
         </>}
       </Box>}
     </Box>
-    <Text color={error ? 'red' : 'gray'} wrap="truncate">{error ? `! ${error} ${updatedAt ? '(showing last update)' : ''}` : busy ? 'Refreshing...' : paused ? 'Refresh paused. Press space to resume.' : run.status === 'completed' ? 'Run finished. Press r to refresh.' : `Refresh every ${interval / 1000}s · updated ${updatedAt ? Math.max(0, Math.floor((now - updatedAt) / 1000)) : 0}s ago`}</Text>
-    <Text dimColor wrap="truncate">{wide ? '↑/↓ j/k jobs · PgUp/PgDn' : `tab ${details ? 'jobs' : 'steps'} · ↑/↓ jobs`} · / search · f filter · space pause · r refresh · q quit</Text>
+    <Text color={error && !logMessage ? 'red' : 'gray'} wrap="truncate">{logMessage ?? (error ? `! ${error} ${updatedAt ? '(showing last update)' : ''}` : busy ? 'Refreshing...' : paused ? 'Refresh paused. Press space to resume.' : run.status === 'completed' ? 'Run finished. Press r to refresh.' : `Refresh every ${interval / 1000}s · updated ${updatedAt ? Math.max(0, Math.floor((now - updatedAt) / 1000)) : 0}s ago`)}</Text>
+    <Text dimColor wrap="truncate">{details ? 'l raw job logs · tab jobs · ↑/↓ scroll' : 'tab steps · ↑/↓ j/k jobs · PgUp/PgDn'} · / search · f filter · space pause · r refresh · q quit</Text>
   </Box>;
 }

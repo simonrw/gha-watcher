@@ -8,15 +8,17 @@ export type Run = Pick<ApiRun, 'id' | 'name' | 'display_title' | 'run_number' | 
 export type Job = Pick<ApiJob, 'id' | 'name' | 'status' | 'conclusion' | 'completed_at' | 'steps' | 'labels' | 'runner_name'> & { started_at: string | null };
 export type Snapshot = { run: Run; jobs: Job[] };
 export type LoadRun = (signal: AbortSignal) => Promise<Snapshot>;
+export type OpenLogs = (jobId: number, signal: AbortSignal) => Promise<void>;
 
-export async function createGitHubLoader(target: RunTarget, token?: string): Promise<LoadRun> {
+export async function createGitHubSource(target: RunTarget, token?: string, baseUrl = 'https://api.github.com') {
   const { Octokit } = await import('octokit');
   const client = new Octokit({
     auth: token,
+    baseUrl,
     retry: { enabled: false },
     throttle: { enabled: false },
   });
-  return async signal => {
+  const load: LoadRun = async signal => {
     const request = () => ({ signal: AbortSignal.any([signal, AbortSignal.timeout(15_000)]) });
     const params = { owner: target.owner, repo: target.repo, run_id: target.runId };
     const { data: run } = await client.rest.actions.getWorkflowRun({ ...params, request: request() });
@@ -45,6 +47,25 @@ export async function createGitHubLoader(target: RunTarget, token?: string): Pro
       jobs,
     };
   };
+  return { load, logUrl: (jobId: number, signal: AbortSignal) => getJobLogUrl(client, target, jobId, signal) };
+}
+
+async function getJobLogUrl(client: Octokit, target: RunTarget, jobId: number, signal: AbortSignal): Promise<string> {
+  const response = await client.rest.actions.downloadJobLogsForWorkflowRun({
+    owner: target.owner, repo: target.repo, job_id: jobId,
+    request: { redirect: 'manual', signal: AbortSignal.any([signal, AbortSignal.timeout(15_000)]) },
+  });
+  const location = response.headers.location;
+  if (!location || new URL(location).protocol !== 'https:') throw new Error('GitHub did not return a secure log URL.');
+  return location;
+}
+
+export function describeLogError(error: unknown): string {
+  const status = error && typeof error === 'object' && 'status' in error ? error.status : undefined;
+  if (status === 404 || status === 410) return 'Logs unavailable. They may not be ready, may have expired, or require repository access.';
+  if (status === 401) return 'Log access denied. Check your token or run gha-watcher login.';
+  if (status === 403 || status === 429) return 'Log access denied or rate limited. Check token permissions or retry later.';
+  return 'Could not open logs. Check your connection and default browser, then press l to retry.';
 }
 
 export function describeError(error: unknown): string {

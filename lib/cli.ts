@@ -30,7 +30,8 @@ Options:
   --help, -h      Show this help
 
 Keys: up/down or j/k select job; PgUp/PgDn page; g/G first/last;
-      left/right scroll steps; tab toggles steps on narrow terminals;
+      tab/enter switches panes; arrows scroll the active pane;
+      l opens raw job logs in your browser from the steps pane;
       / search (enter to finish); f filter; space pause; r refresh; q quit.
 
 Authentication: GH_TOKEN, then GITHUB_TOKEN, then the system keychain.

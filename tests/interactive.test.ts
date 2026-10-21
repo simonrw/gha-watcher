@@ -18,6 +18,16 @@ test('navigate, search, pause and quit a large offline run in a real terminal', 
   }
   try {
     await waitFor('of 1000');
+    child.terminal!.resize(120, 24);
+    await waitFor('1-4 of 6 steps');
+    child.terminal!.write('\t');
+    await waitFor('l raw job logs');
+    child.terminal!.write('j');
+    await waitFor('2-5 of 6 steps');
+    child.terminal!.write('l');
+    await waitFor('logs are unavailable in demo mode.');
+    child.terminal!.write('\t');
+    await waitFor('tab steps');
     child.terminal!.write('G');
     await waitFor('shard 143');
     child.terminal!.write('/');
@@ -34,8 +44,10 @@ test('navigate, search, pause and quit a large offline run in a real terminal', 
     await waitFor('tab steps');
     child.terminal!.write('\t');
     await waitFor('1-4 of 6 steps');
-    child.terminal!.write('\x1b[C');
+    child.terminal!.write('j');
     await waitFor('2-5 of 6 steps');
+    child.terminal!.write('\x1b[C');
+    await waitFor('3-6 of 6 steps');
     child.terminal!.write(' ');
     await waitFor('PAUSED');
     child.terminal!.write(' ');

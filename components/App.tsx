@@ -1,13 +1,13 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Box, Text, useApp, useInput, useWindowSize } from 'ink';
-import type { LoadRun } from '../lib/github';
+import { describeLogError, type LoadRun, type OpenLogs } from '../lib/github';
 import { useRun } from '../lib/use-run';
 import { statusStyle } from '../lib/format';
 import Dashboard, { visibleJobCount } from './Dashboard';
 
 const filters = ['all', 'running', 'failed', 'queued'] as const;
 
-export default function App({ load, interval, demo }: { load: LoadRun; interval: number; demo: boolean }) {
+export default function App({ load, openLogs, interval, demo }: { load: LoadRun; openLogs?: OpenLogs; interval: number; demo: boolean }) {
   const { exit } = useApp();
   const { columns, rows } = useWindowSize();
   const [paused, setPaused] = useState(false);
@@ -19,6 +19,8 @@ export default function App({ load, interval, demo }: { load: LoadRun; interval:
   const [searching, setSearching] = useState(false);
   const [filterIndex, setFilterIndex] = useState(0);
   const [now, setNow] = useState(Date.now());
+  const [logMessage, setLogMessage] = useState<string>();
+  const logRequest = useRef<AbortController | undefined>(undefined);
   const filter = filters[filterIndex]!;
   const jobs = useMemo(() => snapshot?.jobs.filter(job => {
     if (!job.name.toLowerCase().includes(query.toLowerCase())) return false;
@@ -28,6 +30,34 @@ export default function App({ load, interval, demo }: { load: LoadRun; interval:
     return true;
   }) ?? [], [snapshot, query, filter]);
   const selected = Math.max(0, jobs.findIndex(job => job.id === selectedId));
+  const job = jobs[selected];
+  const stepCount = Math.max(1, visibleJobCount(rows) - 3);
+  const maxStepOffset = Math.max(0, (job?.steps?.length ?? 0) - stepCount);
+
+  useEffect(() => {
+    setLogMessage(undefined);
+    setStepOffset(0);
+    return () => {
+      logRequest.current?.abort();
+      logRequest.current = undefined;
+    };
+  }, [job?.id]);
+
+  async function showLogs() {
+    if (!job || logRequest.current) return;
+    if (demo || !openLogs) { setLogMessage('Raw logs are unavailable in demo mode.'); return; }
+    const controller = new AbortController();
+    logRequest.current = controller;
+    setLogMessage('Opening raw job logs...');
+    try {
+      await openLogs(job.id, controller.signal);
+      if (!controller.signal.aborted) setLogMessage('Raw job logs opened in your browser.');
+    } catch (error) {
+      if (!controller.signal.aborted) setLogMessage(describeLogError(error));
+    } finally {
+      if (logRequest.current === controller) logRequest.current = undefined;
+    }
+  }
 
   useEffect(() => {
     if (paused || snapshot?.run.status === 'completed') return;
@@ -44,13 +74,23 @@ export default function App({ load, interval, demo }: { load: LoadRun; interval:
       return;
     }
     if (input === 'q' || key.escape) { exit(); return; }
-    if (input === ' ') setPaused(value => !value);
-    if (input === 'r') refresh();
-    if (input === '/') setSearching(true);
+    if (input === ' ') { setPaused(value => !value); setLogMessage(undefined); }
+    if (input === 'r') { refresh(); setLogMessage(undefined); }
+    if (input === '/') { setSearching(true); setDetails(false); }
     if (key.tab || key.return) setDetails(value => !value);
-    if (input === 'f') { setFilterIndex(value => (value + 1) % filters.length); setStepOffset(0); }
-    if (key.leftArrow) setStepOffset(value => Math.max(0, value - 1));
-    if (key.rightArrow) setStepOffset(value => Math.min(Math.max(0, (jobs[selected]?.steps?.length ?? 1) - 1), value + 1));
+    if (input === 'l' && details) { void showLogs(); return; }
+    if (input === 'f') { setFilterIndex(value => (value + 1) % filters.length); setStepOffset(0); return; }
+    if (details || key.leftArrow || key.rightArrow) {
+      let next = Math.min(stepOffset, maxStepOffset);
+      if (key.downArrow || input === 'j' || key.rightArrow) next++;
+      if (key.upArrow || input === 'k' || key.leftArrow) next--;
+      if (key.pageDown) next += stepCount;
+      if (key.pageUp) next -= stepCount;
+      if (key.home || input === 'g') next = 0;
+      if (key.end || input === 'G') next = maxStepOffset;
+      setStepOffset(Math.max(0, Math.min(maxStepOffset, next)));
+      return;
+    }
     let next = selected;
     if (key.downArrow || input === 'j') next++;
     if (key.upArrow || input === 'k') next--;
@@ -72,5 +112,5 @@ export default function App({ load, interval, demo }: { load: LoadRun; interval:
 
   return <Dashboard snapshot={snapshot} jobs={jobs} selected={selected} stepOffset={stepOffset}
     columns={columns} rows={rows} now={now} demo={demo} paused={paused} busy={busy}
-    error={error} updatedAt={updatedAt} query={query} searching={searching} filter={filter} interval={interval} details={details} />;
+    error={error} logMessage={logMessage} updatedAt={updatedAt} query={query} searching={searching} filter={filter} interval={interval} details={details} />;
 }
