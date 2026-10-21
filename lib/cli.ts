@@ -1,3 +1,4 @@
+import { execFileSync } from 'node:child_process';
 import { parseArgs } from 'node:util';
 
 export type RunTarget = { owner: string; repo: string; runId: number };
@@ -17,11 +18,11 @@ Usage:
   gha-watcher login
   gha-watcher logout
   gha-watcher <run-url>
-  gha-watcher <run-id> --repo <owner/repo>
+  gha-watcher <run-id> [--repo <owner/repo>]
   gha-watcher --demo
 
 Options:
-  --repo, -R       Repository for a numeric run ID
+  --repo, -R       Repository for a numeric run ID (default: current Git origin)
   --interval, -i   Refresh interval in seconds (default: 5, minimum: 2)
   --once          Print one snapshot and exit
   --demo          Use sample data, with no network requests
@@ -38,7 +39,20 @@ Interactive runs prompt when no token is saved. Enter skips for public runs.
 Piped output and --once never prompt automatically.
 `;
 
-export function parseOptions(args: string[]): Options {
+function currentRepository(cwd: string): string | undefined {
+  let remote: string;
+  try {
+    remote = execFileSync('git', ['remote', 'get-url', 'origin'], {
+      cwd, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'],
+    }).trim();
+  } catch {
+    return undefined;
+  }
+  const match = remote.match(/^(?:https:\/\/github\.com\/|git@github\.com:|ssh:\/\/git@github\.com\/)([\w.-]+)\/([\w.-]+?)(?:\.git)?\/?$/);
+  return match ? `${match[1]}/${match[2]}` : undefined;
+}
+
+export function parseOptions(args: string[], cwd = process.cwd()): Options {
   const { values, positionals } = parseArgs({
     args,
     allowPositionals: true,
@@ -75,14 +89,16 @@ export function parseOptions(args: string[]): Options {
     if (positionals.length || values.repo) throw new Error('--demo cannot be combined with a run or --repo.');
     return options;
   }
-  if (positionals.length !== 1) throw new Error('Provide a run URL or a run ID with --repo. Try --demo to explore offline.');
+  if (positionals.length !== 1) throw new Error('Provide a run URL or a run ID. Try --demo to explore offline.');
   const input = positionals[0]!;
   let owner: string | undefined;
   let repo: string | undefined;
   let id: string | undefined;
   if (/^\d+$/.test(input)) {
-    [owner, repo] = (values.repo ?? '').split('/');
-    if (!values.repo?.match(/^[\w.-]+\/[\w.-]+$/)) throw new Error('A numeric run ID requires --repo owner/repo.');
+    const repository = values.repo ?? currentRepository(cwd);
+    if (repository === undefined) throw new Error('Could not determine a GitHub repository from the current directory. Use --repo owner/repo.');
+    if (!repository.match(/^[\w.-]+\/[\w.-]+$/)) throw new Error('--repo must be owner/repo.');
+    [owner, repo] = repository.split('/');
     id = input;
   } else {
     let url: URL;

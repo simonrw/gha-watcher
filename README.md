@@ -14,6 +14,7 @@ bun = "latest"
 mise install
 gha-watcher --demo
 gha-watcher login
+gha-watcher RUN_ID
 gha-watcher RUN_ID --repo OWNER/REPO
 ```
 
@@ -37,7 +38,7 @@ bun start RUN_ID --repo OWNER/REPO
 bun start RUN_ID --repo OWNER/REPO --interval 15
 ```
 
-Use a numeric run ID in place of `RUN_ID`.
+Use a numeric run ID in place of `RUN_ID`. When you omit `--repo`, gha-watcher uses the GitHub repository from the current checkout's `origin` remote, including from subdirectories. HTTPS and SSH remotes are supported. Use `--repo OWNER/REPO` to override it or when outside a checkout.
 
 Save a personal access token once, then watch runs without passing it again:
 
