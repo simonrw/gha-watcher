@@ -16,11 +16,26 @@ for (const args of [
   ['https://example.com/acme/rocket/actions/runs/123'],
   ['--demo', '--interval', 'NaN'], ['--demo', '--interval', '1'],
   ['--demo', '123'], ['--demo', '--demo-jobs', '10001'],
+  ['login', '--demo'], ['logout', '--once'], ['login', '123'], ['logout', '-R', 'acme/rocket'],
 ]) {
   test(`rejects invalid invocation ${args.join(' ')}`, () => {
     expect(() => parseOptions(args)).toThrow();
   });
 }
+
+test('login and logout are standalone commands', () => {
+  expect(['login', 'logout'].map(command => parseOptions([command]).command)).toEqual(['login', 'logout']);
+});
+
+test('login refuses piped input without echoing it', async () => {
+  const token = 'synthetic-secret-do-not-echo';
+  const child = Bun.spawn([process.execPath, 'index.tsx', 'login'], {
+    cwd: import.meta.dir + '/..', stdin: new Response(token), stdout: 'pipe', stderr: 'pipe',
+  });
+  const output = await new Response(child.stdout).text() + await new Response(child.stderr).text();
+  expect({ code: await child.exited, actionable: output.includes('Run login in a terminal'), leaked: output.includes(token) })
+    .toEqual({ code: 1, actionable: true, leaked: false });
+});
 
 test('the offline CLI prints a snapshot and exits', async () => {
   const child = Bun.spawn([process.execPath, 'index.tsx', '--demo', '--once'], {

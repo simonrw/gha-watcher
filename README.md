@@ -20,7 +20,22 @@ bun start RUN_ID --repo OWNER/REPO
 bun start RUN_ID --repo OWNER/REPO --interval 15
 ```
 
-Use a numeric run ID in place of `RUN_ID`. Authentication comes from `GH_TOKEN`, then `GITHUB_TOKEN`. Public repositories can be read without a token. Private repositories require a token with access to the repository and Actions read permission. The app does not invoke `gh` or credential tools.
+Use a numeric run ID in place of `RUN_ID`.
+
+Save a personal access token once, then watch runs without passing it again:
+
+```sh
+bun start login
+bun start RUN_ID --repo OWNER/REPO
+```
+
+The login prompt hides your input and stores the PAT in the system keychain under service `gha-watcher`, account `github.com`. It uses [Bun's Secrets API](https://bun.sh/docs/runtime/secrets): macOS Keychain, Linux Secret Service, or Windows Credential Manager. Linux needs a running service such as GNOME Keyring or KWallet. The app never writes the PAT to a file or invokes `gh` or `op`.
+
+Create a [fine-grained PAT](https://github.com/settings/personal-access-tokens/new) with access to the repositories you want to watch and repository permission **Actions: Read-only**. Login saves the token; repository access is checked when you watch a run.
+
+Authentication uses `GH_TOKEN`, then `GITHUB_TOKEN`, then the saved PAT. Interactive runs prompt when no token is available. Press Enter to continue anonymously for a public repository. `--once` and piped runs use existing credentials without prompting. Demo and help do not access the keychain.
+
+Run `bun start login` again to replace an expired or revoked PAT. Empty input leaves the saved token unchanged. Run `bun start logout` to remove the saved token locally; environment tokens still apply. Revoke the PAT in GitHub settings if you also want to disable it on GitHub.
 
 Press up/down or `j`/`k` to select jobs, Page Up/Down to page, and `g`/`G` to jump to the first/last job. Press `/` to search by name, then Enter to finish editing. Press `f` to cycle through all, running, failed, and queued jobs. Clear a search using backspace in search mode.
 
@@ -41,3 +56,5 @@ bun run bench
 ```
 
 Tests use offline data and a real pseudo-terminal. The benchmark measures rendering at 120 columns by 32 rows for 10, 1,000, and 10,000 jobs. It does not measure API latency. The live GitHub integration has not been exercised yet.
+
+`GHA_WATCHER_TEST_KEYCHAIN=1 bun test tests/auth.test.ts` also checks storage, reuse, replacement, and deletion in the real system keychain. It uses a random test service and a synthetic token, then removes the entry. This check requires an unlocked keychain and is skipped by default.

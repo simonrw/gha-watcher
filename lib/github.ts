@@ -49,8 +49,8 @@ export async function createGitHubLoader(target: RunTarget, token?: string): Pro
 
 export function describeError(error: unknown): string {
   const status = error && typeof error === 'object' && 'status' in error ? error.status : undefined;
-  if (status === 401) return 'Authentication failed. Check GH_TOKEN or GITHUB_TOKEN.';
-  if (status === 404) return 'Run not found. Check the repository, run ID, and token access.';
+  if (status === 401) return 'Authentication failed. Run bun start login to replace the saved PAT, or check GH_TOKEN / GITHUB_TOKEN if set.';
+  if (status === 404) return 'Run not found. Check the repository, run ID, and token access. Use bun start login to save a PAT.';
   if (status === 403 || status === 429) return 'GitHub denied the request or rate limited it. Check token permissions or retry later.';
   if (typeof status === 'number') return `GitHub returned HTTP ${status}. Press r to retry.`;
   return 'Could not fetch the run. Check your connection and press r to retry.';

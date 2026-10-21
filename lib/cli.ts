@@ -2,6 +2,7 @@ import { parseArgs } from 'node:util';
 
 export type RunTarget = { owner: string; repo: string; runId: number };
 export type Options = {
+  command?: 'login' | 'logout';
   target?: RunTarget;
   demo: boolean;
   once: boolean;
@@ -13,6 +14,8 @@ export type Options = {
 export const help = `gha-watcher - GitHub Actions in your terminal
 
 Usage:
+  bun start login
+  bun start logout
   bun start <run-url>
   bun start <run-id> --repo <owner/repo>
   bun start --demo
@@ -29,8 +32,10 @@ Keys: up/down or j/k select job; PgUp/PgDn page; g/G first/last;
       left/right scroll steps; tab toggles steps on narrow terminals;
       / search (enter to finish); f filter; space pause; r refresh; q quit.
 
-Authentication: GH_TOKEN or GITHUB_TOKEN from your environment.
-Public repositories also work without a token.
+Authentication: GH_TOKEN, then GITHUB_TOKEN, then the system keychain.
+Run login to save or replace a PAT with hidden input; logout removes it locally.
+Interactive runs prompt when no token is saved. Enter skips for public runs.
+Piped output and --once never prompt automatically.
 `;
 
 export function parseOptions(args: string[]): Options {
@@ -54,6 +59,13 @@ export function parseOptions(args: string[]): Options {
     demoJobs: Number(values['demo-jobs'] ?? 7),
   };
   if (options.help) return options;
+  if (positionals[0] === 'login' || positionals[0] === 'logout') {
+    if (positionals.length !== 1 || Object.keys(values).length) {
+      throw new Error('Use login or logout without run options.');
+    }
+    options.command = positionals[0];
+    return options;
+  }
   if (!Number.isInteger(options.demoJobs) || options.demoJobs < 1 || options.demoJobs > 10_000) throw new Error('--demo-jobs must be between 1 and 10000.');
   if (values['demo-jobs'] && !options.demo) throw new Error('--demo-jobs requires --demo.');
   if (!Number.isFinite(options.interval) || options.interval < 2000 || options.interval > 3_600_000) {
